@@ -5,8 +5,14 @@ function writeJSDocComments(document) {
   const propTypesObjects = getPropTypesObjects(document)
   let lines = getLines(document)
 
+  // get new file content
   Object.keys(propTypesObjects).forEach(componentName => {
-    const newLines = getNewLines(propTypesObjects, componentName, lines)
+    const newLines = getNewLines(
+      propTypesObjects,
+      componentName,
+      lines,
+      document
+    )
     lines = newLines
   })
 
@@ -24,7 +30,7 @@ function writeJSDocComments(document) {
  * @param {string} componentName
  * @param {string[]} lines
  */
-function getNewLines(propTypesJsons, componentName, lines) {
+function getNewLines(propTypesJsons, componentName, lines, document) {
   // create jsdoc comment for each component
   const componentJson = propTypesJsons[componentName]
   /** @type {{ propName: string, typeValue: string }[]} */
@@ -38,7 +44,7 @@ function getNewLines(propTypesJsons, componentName, lines) {
   let jsdocString = '/**\n * @component\n * @param {object} props\n'
 
   for (const prop of props) {
-    const JSDocType = getJSDocType(prop.typeValue)
+    const JSDocType = getJSDocType(prop.typeValue, document)
     jsdocString += ` * @param {${JSDocType}} props.${prop.propName}\n`
   }
 

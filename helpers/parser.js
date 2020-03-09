@@ -1,3 +1,6 @@
+const fs = require('fs')
+const vscode = require('vscode')
+
 /**
  *
  * @param {import('vscode').TextDocument} document
@@ -107,21 +110,101 @@ function getPropTypesObjects(document) {
 
 /**
  *
- * @param {string} str
+ * @param {string} importedContent
+ * @param {number} startIndex
  */
-function getJSDocType(str) {
+function getImportedPropType(importedContent, startIndex) {
+  // get content up to ( or \n or end of file
+  let firstProptypeContent = ''
+  for (let i = startIndex; i < importedContent.length; i++) {
+    const c = importedContent.charAt(i)
+    if (c === '\n' || c === '(') break
+    firstProptypeContent += c
+  }
+
+  let proptypeContent = firstProptypeContent
+
+  // check if first line contains unclosed bracket
+  let count = 0
+  for (let i = startIndex; i < importedContent.length; i++) {
+    const c = importedContent.charAt(i)
+    if (c === '\n') break
+    if (c === '(') count++
+    if (c === ')') count--
+  }
+
+  if (count > 0) {
+    // first line contains unclosed bracket
+    const substring = importedContent.substring(startIndex)
+    const innerContent = getInnerContent('(', ')', substring)
+    proptypeContent += `(${innerContent})`
+  }
+
+  return proptypeContent
+}
+
+/**
+ *
+ * @param {string} str
+ * @param {import('vscode').TextDocument} document
+ */
+function getJSDocType(str, document) {
+  // check if it's normal PropTypes.[type] or imported proptype
+  if (/^\s*PropTypes.[a-zA-Z]+/.test(str) === false) {
+    // imported proptype
+    // populate the string with actual PropTypes.[type]
+
+    // get imported proptype name
+    const name = str.split('.')[0].trim()
+
+    // find import
+    const text = document.getText()
+    const regex = new RegExp(
+      `import[\\s{]+${name}[\\s}]+from\\s+['"][/.\\w]+['"]`,
+      'gm'
+    )
+    const line = text.match(regex)[0]
+    const path = line.match(/['"][/.\w]+['"]/)[0].replace(/['"]/g, '')
+
+    let fullPath
+    if (/^./.test(path)) {
+      // relative path
+      fullPath =
+        document.uri.fsPath.replace(/[\\/][\w]+.[\w]+$/, '') +
+        '/' +
+        path +
+        '.js'
+    } else {
+      // absolute path
+      fullPath = vscode.workspace.rootPath + '/' + path
+    }
+
+    const importedContent = fs.readFileSync(fullPath, 'utf8')
+
+    // find the line with proptype name
+    const nameRegex = new RegExp(`const\\s*${name}\\s*=\\s*`)
+    const matchLength = importedContent.match(nameRegex)[0].length
+    const propTypeStartIndex = importedContent.search(nameRegex) + matchLength
+    const proptypeContent = getImportedPropType(
+      importedContent,
+      propTypeStartIndex
+    )
+
+    return getJSDocType(str.replace(name, proptypeContent), document)
+  }
+
   const type = str.match(/PropTypes.[a-zA-Z]+/)[0].split('.')[1]
 
   switch (type) {
     case 'arrayOf': {
       const innerContent = getInnerContent('(', ')', str)
-      return '[' + getJSDocType(innerContent) + ']'
+      return '[' + getJSDocType(innerContent, document) + ']'
     }
     case 'shape': {
       const innerContent = getInnerContent('{', '}', str)
       const obj = getObject(innerContent)
       const parsedArray = Object.keys(obj).map(name => {
-        return `${name}: ${getJSDocType(obj[name])}`
+        return `${name}: ${getJSDocType(obj[name], document)}`
       })
       const parsed = parsedArray.join(',')
       return '{' + parsed + '}'
