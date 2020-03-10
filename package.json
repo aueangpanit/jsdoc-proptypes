@@ -2,7 +2,7 @@
   "name": "jsdoc-proptypes",
   "displayName": "jsdoc-proptypes",
   "description": "Automatically create jsdoc comments for the given proptype of a React component",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.42.0"
   },

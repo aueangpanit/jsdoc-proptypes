@@ -236,6 +236,9 @@ function getJSDocType(str, document) {
     case 'func': {
       return 'function'
     }
+    case 'bool': {
+      return 'boolean'
+    }
     default:
       return type
   }
