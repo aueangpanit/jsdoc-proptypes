@@ -167,22 +167,46 @@ function getJSDocType(str, document) {
     const path = line.match(/['"][/.\w]+['"]/)[0].replace(/['"]/g, '')
 
     let fullPath
-    if (/^./.test(path)) {
+    if (/^\./.test(path)) {
       // relative path
       fullPath =
-        document.uri.fsPath.replace(/[\\/][\w]+.[\w]+$/, '') +
-        '/' +
-        path +
-        '.js'
+        document.uri.fsPath.replace(/[\\/][\w]+.[\w]+$/, '') + '/' + path
     } else {
       // absolute path
-      fullPath = vscode.workspace.rootPath + '/' + path
+      fullPath =
+        vscode.workspace.workspaceFolders[0].uri.fsPath + '/src/' + path
     }
 
-    const importedContent = fs.readFileSync(fullPath, 'utf8')
+    try {
+    } catch (error) {
+      console.log(error)
+    }
+
+    // try file
+    let hasErrors = false
+    let importedContent = ''
+    try {
+      importedContent = fs.readFileSync(fullPath + '.js', 'utf8')
+    } catch (errors) {
+      hasErrors = true
+    }
+
+    const nameRegex = new RegExp(`const\\s*${name}\\s*=\\s*`)
+
+    if (hasErrors) {
+      // probably no files found - instead get the folder and test all files
+      try {
+        const files = fs.readdirSync(fullPath)
+        for (const file of files) {
+          importedContent = fs.readFileSync(fullPath + '/' + file, 'utf8')
+          if (nameRegex.test(importedContent)) break
+        }
+      } catch (error) {
+        console.log(error)
+      }
+    }
 
     // find the line with proptype name
-    const nameRegex = new RegExp(`const\\s*${name}\\s*=\\s*`)
     const matchLength = importedContent.match(nameRegex)[0].length
     const propTypeStartIndex = importedContent.search(nameRegex) + matchLength
     const proptypeContent = getImportedPropType(

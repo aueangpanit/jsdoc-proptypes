@@ -41,7 +41,8 @@ function getNewLines(propTypesJsons, componentName, lines, document) {
   })
 
   // construct jsdoc string
-  let jsdocString = '/**\n * @component\n * @param {object} props\n'
+  let jsdocString =
+    "/**\n * @component\n * @type {import('react').FunctionComponent}\n * @param {object} props\n"
 
   for (const prop of props) {
     const JSDocType = getJSDocType(prop.typeValue, document)
