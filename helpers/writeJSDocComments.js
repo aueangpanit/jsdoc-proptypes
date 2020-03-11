@@ -55,7 +55,8 @@ function getNewLines(propTypesJsons, componentName, lines, document) {
   // i.e. find the line that contains const [componentName]
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-    if (line.includes(`const ${componentName}`)) {
+    const nameRegex = new RegExp(`const\\s*${componentName}\\s*=`)
+    if (nameRegex.test(line)) {
       if (i > 0 && lines[i - 1].includes('*/')) return lines.slice()
 
       lines.splice(i, 0, jsdocString)
